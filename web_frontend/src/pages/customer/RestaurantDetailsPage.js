@@ -18,9 +18,31 @@ export function RestaurantDetailsPage() {
     let alive = true;
     (async () => {
       setLoading(true);
-      const res = await apiClient.getRestaurantDetails(restaurantId);
-      if (alive) setData(res);
-      setLoading(false);
+      try {
+        const restaurant = await apiClient.getRestaurant(restaurantId);
+        const menus = await apiClient.listMenusForRestaurant(restaurantId);
+        const firstMenuId = menus?.[0]?.id || null;
+
+        const menuWithItems = firstMenuId ? await apiClient.getMenuWithItems(firstMenuId) : { menu: null, items: [] };
+
+        // Normalize to UI shape expected by this page.
+        const normalized = {
+          ...restaurant,
+          etaMin: 25,
+          menuId: firstMenuId,
+          menu: (menuWithItems.items || []).map((i) => ({
+            id: i.id,
+            name: i.name,
+            description: i.description,
+            price: Number(i.price_cents) / 100,
+            currency: i.currency,
+          })),
+        };
+
+        if (alive) setData(normalized);
+      } finally {
+        if (alive) setLoading(false);
+      }
     })();
     return () => {
       alive = false;
@@ -65,7 +87,7 @@ export function RestaurantDetailsPage() {
           <>
             <h1 className="pageTitle">{data?.name}</h1>
             <p className="pageSub">
-              {data?.cuisine} • <strong>{data?.etaMin} min</strong>
+              {(data?.city || "City")} {data?.state ? `• ${data.state}` : ""} • <strong>{data?.etaMin ?? 25} min</strong>
             </p>
 
             {data?.description && <div className="notice">{data.description}</div>}

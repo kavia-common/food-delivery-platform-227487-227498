@@ -5,12 +5,13 @@ import { useAuth } from "../../app/state/auth";
 
 // PUBLIC_INTERFACE
 export function RegisterPage() {
-  /** Registration UI (backend-integrated when /auth/register exists; otherwise mock). */
+  /** Registration UI (FastAPI /auth/register). */
   const { setAuth } = useAuth();
   const navigate = useNavigate();
 
   const [role, setRole] = useState("customer");
   const [email, setEmail] = useState("newuser@example.com");
+  const [fullName, setFullName] = useState("New User");
   const [password, setPassword] = useState("password");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -20,8 +21,12 @@ export function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await apiClient.register({ email, password, role });
-      setAuth({ token: res.token, user: res.user });
+      await apiClient.register({ email, password, full_name: fullName, role });
+      // Immediately login to obtain JWT
+      const loginRes = await apiClient.login({ email, password });
+      const token = loginRes.access_token;
+      const user = await apiClient.me({ token });
+      setAuth({ token, user });
       navigate("/");
     } catch (err) {
       setError(err.message || "Registration failed");
@@ -48,6 +53,11 @@ export function RegisterPage() {
         <div style={{ marginBottom: 12 }}>
           <label className="label">Email</label>
           <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <label className="label">Full name</label>
+          <input className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" />
         </div>
 
         <div style={{ marginBottom: 12 }}>

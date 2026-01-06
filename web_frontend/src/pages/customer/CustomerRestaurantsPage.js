@@ -27,8 +27,12 @@ export function CustomerRestaurantsPage() {
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     return restaurants
-      .filter((r) => (query ? r.name.toLowerCase().includes(query) || r.cuisine.toLowerCase().includes(query) : true))
-      .filter((r) => (r.etaMin || 999) <= maxEta);
+      .filter((r) => (query ? r.name.toLowerCase().includes(query) || (r.city || "").toLowerCase().includes(query) : true))
+      .filter((r) => {
+        // Backend doesn't provide ETA yet; keep slider but treat as always passing.
+        const etaMin = r.etaMin ?? 25;
+        return etaMin <= maxEta;
+      });
   }, [restaurants, q, maxEta]);
 
   return (
@@ -81,7 +85,7 @@ export function CustomerRestaurantsPage() {
                 <div style={{ flex: 1 }}>
                   <p className="itemTitle">{r.name}</p>
                   <p className="itemMeta">
-                    {r.cuisine} • <strong>{r.etaMin} min</strong>
+                    {(r.city || "City")} {r.state ? `• ${r.state}` : ""} • <strong>{r.etaMin ?? 25} min</strong>
                   </p>
                 </div>
                 <button className="btn btnPrimary" type="button" onClick={() => navigate(`/customer/restaurants/${r.id}`)}>

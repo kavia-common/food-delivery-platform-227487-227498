@@ -1,15 +1,17 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiClient } from "../../api/client";
+import { useAuth } from "../../app/state/auth";
 import { useCart, calcCartTotal } from "../../app/state/cart";
 
 // PUBLIC_INTERFACE
 export function CheckoutPage() {
   /** Checkout UI with address + order placement. */
   const navigate = useNavigate();
+  const { token } = useAuth();
   const { cart, setCart } = useCart();
 
-  const [address, setAddress] = useState("123 Main St, Springfield");
+  const [address, setAddress] = useState("987 Market St, San Francisco");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -17,17 +19,30 @@ export function CheckoutPage() {
 
   const placeOrder = async () => {
     setError("");
+    if (!token) {
+      setError("Please sign in before placing an order.");
+      return;
+    }
     if (!cart.restaurantId || cart.items.length === 0) {
       setError("Your cart is empty. Add items from a restaurant first.");
       return;
     }
+
+    // Very small parser: "line1, city"
+    const [line1Raw, cityRaw] = (address || "").split(",").map((s) => (s || "").trim());
+    const delivery_address_line1 = line1Raw || address;
+    const delivery_city = cityRaw || "San Francisco";
+
     setLoading(true);
     try {
       const order = await apiClient.createOrder({
-        restaurantId: cart.restaurantId,
-        items: cart.items,
-        address,
+        token,
+        restaurant_id: cart.restaurantId,
+        items: cart.items.map((it) => ({ menu_item_id: it.id, quantity: it.qty })),
+        delivery_address_line1,
+        delivery_city,
       });
+
       // Clear cart after placing order
       setCart({ restaurantId: null, restaurantName: null, items: [] });
       navigate(`/customer/order-confirmation/${order.id}`, { state: { order } });

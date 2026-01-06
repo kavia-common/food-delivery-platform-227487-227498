@@ -5,11 +5,11 @@ import { useAuth } from "../../app/state/auth";
 
 // PUBLIC_INTERFACE
 export function LoginPage() {
-  /** Login UI (backend-integrated when /auth/login exists; otherwise mock). */
+  /** Login UI (FastAPI /auth/login). */
   const { setAuth } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("customer@example.com");
+  const [email, setEmail] = useState("customer1@example.com");
   const [password, setPassword] = useState("password");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -20,7 +20,10 @@ export function LoginPage() {
     setLoading(true);
     try {
       const res = await apiClient.login({ email, password });
-      setAuth({ token: res.token, user: res.user });
+      // Backend returns {access_token, token_type}. Fetch /auth/me to get role/profile.
+      const token = res.access_token;
+      const user = await apiClient.me({ token });
+      setAuth({ token, user });
       navigate("/");
     } catch (err) {
       setError(err.message || "Login failed");
@@ -65,7 +68,7 @@ export function LoginPage() {
         </form>
 
         <div style={{ marginTop: 16 }} className="help">
-          Tip: in mock mode, include <code>rest</code> in email for restaurant role or <code>cour</code> for courier.
+          Seed accounts: <code>customer1@example.com</code>, <code>owner1@example.com</code>, <code>courier1@example.com</code>, <code>admin@example.com</code>
         </div>
       </div>
 
